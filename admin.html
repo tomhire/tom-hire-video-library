@@ -42,32 +42,33 @@
 
         <div id="videoFormContainer" style="display:none;background:var(--bg-secondary);padding:1.5rem;border-radius:8px;margin:1.5rem 0">
             <h3 id="formTitle">Add New Video</h3>
+
             <form id="videoForm">
                 <input type="hidden" id="videoId">
 
                 <div class="form-group">
-                    <label for="vTitle">Video Title</label>
-                    <input id="vTitle" class="form-control" required maxlength="200">
+                    <label for="vTitle">Video Title (Optional)</label>
+                    <input id="vTitle" class="form-control" maxlength="200">
                 </div>
 
                 <div class="form-group">
-                    <label for="vDesc">Description</label>
-                    <textarea id="vDesc" class="form-control" required></textarea>
+                    <label for="vDesc">Description (Optional)</label>
+                    <textarea id="vDesc" class="form-control"></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label for="vThumb">Thumbnail Image URL</label>
-                    <input id="vThumb" type="url" class="form-control" required>
+                    <label for="vThumb">Thumbnail Image URL (Optional)</label>
+                    <input id="vThumb" type="url" class="form-control">
                 </div>
 
                 <div class="form-group">
-                    <label for="vUrl">Viddler Embed URL</label>
+                    <label for="vUrl">Viddler Embed URL (Required)</label>
                     <input id="vUrl" type="url" class="form-control" required placeholder="https://...">
                     <small>Paste the Viddler embed URL, not the full iframe code.</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="vDate">Publication Date</label>
+                    <label for="vDate">Publication Date (Required)</label>
                     <input id="vDate" type="date" class="form-control" required>
                 </div>
 
@@ -161,7 +162,7 @@ async function loadAdminTable() {
             const date = document.createElement("td");
             const actions = document.createElement("td");
 
-            title.textContent = video.title || "";
+            title.textContent = video.title || "Untitled video";
             date.textContent = video.publish_date || "";
 
             const edit = document.createElement("button");
@@ -213,9 +214,9 @@ form.addEventListener("submit", async e => {
 
     const id = $("videoId").value;
     const payload = {
-        title: $("vTitle").value.trim(),
-        description: $("vDesc").value.trim(),
-        thumbnail: $("vThumb").value.trim(),
+        title: $("vTitle").value.trim() || null,
+        description: $("vDesc").value.trim() || null,
+        thumbnail: $("vThumb").value.trim() || null,
         video_url: $("vUrl").value.trim(),
         publish_date: $("vDate").value
     };
