@@ -30,7 +30,7 @@
 
         <section>
             <div id="videoGrid" class="video-grid">
-                <!-- Dynamically populated -->
+                <p>Loading videos...</p>
             </div>
         </section>
     </main>
@@ -41,42 +41,83 @@
 
     <script src="app.js"></script>
     <script>
-        const grid = document.getElementById('videoGrid');
-        const searchInput = document.getElementById('searchInput');
+        const grid = document.getElementById("videoGrid");
+        const searchInput = document.getElementById("searchInput");
+        let allVideos = [];
 
-        function renderGallery(filter = '') {
-            const videos = getVideos();
-            const filtered = videos.filter(v => 
-                v.title.toLowerCase().includes(filter.toLowerCase()) || 
-                v.description.toLowerCase().includes(filter.toLowerCase())
+        function renderGallery(filter = "") {
+            grid.replaceChildren();
+
+            const filtered = allVideos.filter(video =>
+                (video.title || "").toLowerCase().includes(filter.toLowerCase()) ||
+                (video.description || "").toLowerCase().includes(filter.toLowerCase())
             );
 
-            // Sort by custom publication date descending
-            filtered.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-
             if (filtered.length === 0) {
-                grid.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: var(--text-secondary);">No videos found.</p>`;
+                const message = document.createElement("p");
+                message.textContent = "No videos found.";
+                grid.appendChild(message);
                 return;
             }
 
-            grid.innerHTML = filtered.map(v => `
-                <div class="video-card">
-                    <div class="thumbnail-container">
-                        <a href="watch.html?id=${v.id}">
-                            <img src="${v.thumbnail}" alt="${v.title}" loading="lazy">
-                        </a>
-                    </div>
-                    <div class="video-info">
-                        <a href="watch.html?id=${v.id}" class="video-title">${v.title}</a>
-                        <p class="video-desc">${v.description}</p>
-                        <div class="video-meta">Published: ${v.pubDate}</div>
-                    </div>
-                </div>
-            `).join('');
+            filtered.forEach(video => {
+                const card = document.createElement("div");
+                card.className = "video-card";
+
+                const thumbnailContainer = document.createElement("div");
+                thumbnailContainer.className = "thumbnail-container";
+
+                const link = document.createElement("a");
+                link.href = "watch.html?id=" + encodeURIComponent(video.id);
+
+                const img = document.createElement("img");
+                img.src = video.thumbnail || "";
+                img.alt = video.title || "Video thumbnail";
+                img.loading = "lazy";
+
+                link.appendChild(img);
+                thumbnailContainer.appendChild(link);
+
+                const info = document.createElement("div");
+                info.className = "video-info";
+
+                const title = document.createElement("a");
+                title.className = "video-title";
+                title.href = link.href;
+                title.textContent = video.title || "Untitled video";
+
+                const description = document.createElement("p");
+                description.className = "video-desc";
+                description.textContent = video.description || "";
+
+                const date = document.createElement("div");
+                date.className = "video-meta";
+                date.textContent = "Published: " + (video.publish_date || "");
+
+                info.append(title, description, date);
+                card.append(thumbnailContainer, info);
+                grid.appendChild(card);
+            });
         }
 
-        searchInput.addEventListener('input', (e) => renderGallery(e.target.value));
-        renderGallery();
+        async function loadVideos() {
+            try {
+                allVideos = await getVideos();
+                allVideos.sort((a, b) =>
+                    new Date(b.publish_date || 0) - new Date(a.publish_date || 0)
+                );
+                renderGallery();
+            } catch (error) {
+                console.error(error);
+                grid.textContent = "Could not load videos. Please refresh the page.";
+            }
+        }
+
+        searchInput.addEventListener("input", () => {
+            renderGallery(searchInput.value);
+        });
+
+        loadVideos();
     </script>
 </body>
 </html>
