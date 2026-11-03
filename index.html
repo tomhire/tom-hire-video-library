@@ -3,174 +3,240 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Watch Video - Tom Hire Video Library</title>
+  <title>Tom Hire Video Library</title>
   <link rel="stylesheet" href="style.css">
 
   <style>
-    .watch-container {
-      max-width: 1000px;
-      margin: 40px auto;
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 22px;
       padding: 20px;
     }
 
-    .player {
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      background: #000;
-      border-radius: 12px;
+    .video-card {
+      display: block;
       overflow: hidden;
+      border-radius: 12px;
+      background: #171717;
+      color: inherit;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform .2s;
     }
 
-    .player iframe {
+    .video-card:hover { transform: translateY(-4px); }
+
+    .thumbnail-container {
+      width: 100%;
+      aspect-ratio: 16/9;
+      overflow: hidden;
+      background: #222;
+      position: relative;
+    }
+
+    .thumbnail-container img {
+      display: block;
       width: 100%;
       height: 100%;
-      border: 0;
+      object-fit: cover;
     }
 
-    .watch-title { margin-top: 24px; }
-    .watch-description { line-height: 1.7; }
-
-    .watch-actions {
+    .play-overlay {
+      position: absolute;
+      inset: 0;
       display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin: 20px 0;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,.12);
+      pointer-events: none;
     }
 
-    .share-button {
-      padding: 11px 20px;
-      border: 0;
-      border-radius: 8px;
-      background: #e50914;
+    .play-button {
+      width: 66px;
+      height: 66px;
+      border-radius: 50%;
+      background: rgba(220,0,0,.92);
+      border: 3px solid white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: white;
-      font-size: 15px;
-      cursor: pointer;
+      font-size: 27px;
+      padding-left: 5px;
+      box-shadow: 0 3px 15px rgba(0,0,0,.5);
+      transition: transform .2s;
     }
 
-    .share-button:hover { opacity: 0.85; }
+    .video-card:hover .play-button { transform: scale(1.12); }
 
-    #shareMessage {
-      margin-top: 10px;
-      color: #16a34a;
+    .video-info { padding: 15px; }
+    .video-title { font-size: 18px; font-weight: bold; color: white; }
+    .video-desc { color: #ccc; margin-top: 8px; }
+    .video-meta { color: #999; font-size: 13px; margin-top: 10px; }
+
+    .hero-section { text-align: center; padding: 35px 15px; }
+
+    .search-bar input {
+      max-width: 450px;
+      width: 90%;
+      padding: 12px;
+      margin-top: 20px;
+      border-radius: 8px;
+    }
+
+    .image-error {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 100%;
+      color: white;
+      background: #252525;
     }
   </style>
 </head>
 
 <body>
-  <header>
-    <div class="nav-container">
-      <a href="index.html" class="logo">Tom Hire <span>Video Library</span></a>
-      <ul class="nav-links">
-        <li><a href="index.html">Home</a></li>
-        <li><a href="admin.html">Admin Dashboard</a></li>
-      </ul>
+<header>
+  <div class="nav-container">
+    <a href="index.html" class="logo">Tom Hire <span>Video Library</span></a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="admin.html">Admin Dashboard</a></li>
+    </ul>
+  </div>
+</header>
+
+<main>
+  <section class="hero-section">
+    <h1>Tom Hire Video Library</h1>
+    <p>Explore the video collection.</p>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search videos...">
     </div>
-  </header>
+  </section>
 
-  <main class="watch-container">
-    <div id="videoPlayer" class="player">
-      <p style="color:white;padding:20px;">Loading video...</p>
+  <section>
+    <div id="videoGrid" class="video-grid">
+      <p>Loading videos...</p>
     </div>
+  </section>
+</main>
 
-    <h1 id="videoTitle" class="watch-title">Loading...</h1>
-    <p id="videoDescription" class="watch-description"></p>
-    <p id="videoDate"></p>
+<footer>
+  <p>© 2026 Tom Hire Video Library. All rights reserved.</p>
+</footer>
 
-    <div class="watch-actions">
-      <button id="shareButton" class="share-button" type="button">
-        ↗ Share Video
-      </button>
-    </div>
+<script src="app.js"></script>
 
-    <p id="shareMessage"></p>
-    <p><a href="index.html">← Back to videos</a></p>
-  </main>
+<script>
+const grid = document.getElementById("videoGrid");
+const searchInput = document.getElementById("searchInput");
+let allVideos = [];
 
-  <script src="app.js"></script>
+function renderGallery(filter = "") {
+  grid.replaceChildren();
 
-  <script>
-    async function loadVideo() {
-      const params = new URLSearchParams(window.location.search);
-      const id = params.get("id");
-      const player = document.getElementById("videoPlayer");
+  const search = filter.toLowerCase();
 
-      if (!id) {
-        player.textContent = "Video ID missing.";
-        return;
-      }
+  const filtered = allVideos.filter(video =>
+    (video.title || "").toLowerCase().includes(search) ||
+    (video.description || "").toLowerCase().includes(search)
+  );
 
-      try {
-        const videos = await getVideos();
-        const video = videos.find(item => String(item.id) === String(id));
+  if (filtered.length === 0) {
+    const message = document.createElement("p");
+    message.textContent = "No videos found.";
+    grid.appendChild(message);
+    return;
+  }
 
-        if (!video) {
-          player.textContent = "Video not found.";
-          return;
-        }
+  filtered.forEach(video => {
+    const card = document.createElement("a");
+    card.className = "video-card";
+    card.href = "watch.html?id=" + encodeURIComponent(video.id);
 
-        document.getElementById("videoTitle").textContent =
-          video.title || "";
+    const thumbnail = document.createElement("div");
+    thumbnail.className = "thumbnail-container";
 
-        document.getElementById("videoDescription").textContent =
-          video.description || "";
+    if (video.thumbnail) {
+      const img = document.createElement("img");
+      img.src = video.thumbnail;
+      img.alt = video.title || "Video thumbnail";
+      img.loading = "lazy";
+      img.referrerPolicy = "no-referrer";
 
-        document.getElementById("videoDate").textContent =
-          video.publish_date || "";
+      img.onerror = function() {
+        const errorBox = document.createElement("div");
+        errorBox.className = "image-error";
+        errorBox.textContent = "Thumbnail unavailable";
+        thumbnail.replaceChildren(errorBox);
+        thumbnail.appendChild(playOverlay);
+      };
 
-        const videoUrl = new URL(video.video_url);
-
-        if (
-          videoUrl.hostname !== "viddler.com" &&
-          !videoUrl.hostname.endsWith(".viddler.com")
-        ) {
-          player.textContent = "Invalid video URL.";
-          return;
-        }
-
-        // Autoplay request; browser/player may still require a click.
-        videoUrl.searchParams.set("autoplay", "1");
-
-        const iframe = document.createElement("iframe");
-        iframe.src = videoUrl.href;
-        iframe.title = video.title || "Video player";
-        iframe.allow = "autoplay; fullscreen; picture-in-picture";
-        iframe.allowFullscreen = true;
-
-        player.replaceChildren(iframe);
-
-        document.getElementById("shareButton").addEventListener("click", shareVideo);
-
-      } catch (error) {
-        console.error(error);
-        player.textContent = "Could not load video. Please refresh.";
-      }
+      thumbnail.appendChild(img);
+    } else {
+      const errorBox = document.createElement("div");
+      errorBox.className = "image-error";
+      errorBox.textContent = "No thumbnail";
+      thumbnail.appendChild(errorBox);
     }
 
-    async function shareVideo() {
-      const shareUrl = window.location.href;
-      const message = document.getElementById("shareMessage");
+    const playOverlay = document.createElement("div");
+    playOverlay.className = "play-overlay";
 
-      try {
-        if (navigator.share) {
-          await navigator.share({
-            title: document.getElementById("videoTitle").textContent,
-            url: shareUrl
-          });
-          message.textContent = "Share opened.";
-        } else if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(shareUrl);
-          message.textContent = "Video link copied!";
-        } else {
-          window.prompt("Copy this video link:", shareUrl);
-        }
-      } catch (error) {
-        if (error.name !== "AbortError") {
-          message.textContent = "Could not share. Please copy the page link.";
-        }
-      }
-    }
+    const playButton = document.createElement("span");
+    playButton.className = "play-button";
+    playButton.textContent = "▶";
 
-    loadVideo();
-  </script>
+    playOverlay.appendChild(playButton);
+    thumbnail.appendChild(playOverlay);
+
+    const info = document.createElement("div");
+    info.className = "video-info";
+
+    const title = document.createElement("div");
+    title.className = "video-title";
+    title.textContent = video.title || "Untitled video";
+
+    const description = document.createElement("p");
+    description.className = "video-desc";
+    description.textContent = video.description || "";
+
+    const date = document.createElement("div");
+    date.className = "video-meta";
+    date.textContent = video.publish_date
+      ? "Published: " + video.publish_date
+      : "";
+
+    info.append(title, description, date);
+    card.append(thumbnail, info);
+    grid.appendChild(card);
+  });
+}
+
+async function loadVideos() {
+  try {
+    allVideos = await getVideos();
+
+    allVideos.sort((a, b) =>
+      new Date(b.publish_date || 0) -
+      new Date(a.publish_date || 0)
+    );
+
+    renderGallery();
+
+  } catch (error) {
+    console.error("Video loading error:", error);
+    grid.textContent = "Could not load videos. Please refresh.";
+  }
+}
+
+searchInput.addEventListener("input", () => {
+  renderGallery(searchInput.value);
+});
+
+loadVideos();
+</script>
 </body>
 </html>
