@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tom Hire Video Library</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="nav-container">
+            <a href="index.html" class="logo">Tom Hire <span>Video Library</span></a>
+            <ul class="nav-links">
+                <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="contact.html">Contact</a></li>
+                <li><a href="admin.html" class="admin-badge">Admin Dashboard</a></li>
+            </ul>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero-section">
+            <h1>Curated Video Collection</h1>
+            <p>Explore exclusive video releases by Tom Hire.</p>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search videos by title or description...">
+            </div>
+        </section>
+
+        <section>
+            <div id="videoGrid" class="video-grid">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Tom Hire Video Library. All rights reserved.</p>
+    </footer>
+
+    <script src="app.js"></script>
+    <script>
+        const grid = document.getElementById('videoGrid');
+        const searchInput = document.getElementById('searchInput');
+
+        function renderGallery(filter = '') {
+            const videos = getVideos();
+            const filtered = videos.filter(v => 
+                v.title.toLowerCase().includes(filter.toLowerCase()) || 
+                v.description.toLowerCase().includes(filter.toLowerCase())
+            );
+
+            // Sort by custom publication date descending
+            filtered.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: var(--text-secondary);">No videos found.</p>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(v => `
+                <div class="video-card">
+                    <div class="thumbnail-container">
+                        <a href="watch.html?id=${v.id}">
+                            <img src="${v.thumbnail}" alt="${v.title}" loading="lazy">
+                        </a>
+                    </div>
+                    <div class="video-info">
+                        <a href="watch.html?id=${v.id}" class="video-title">${v.title}</a>
+                        <p class="video-desc">${v.description}</p>
+                        <div class="video-meta">Published: ${v.pubDate}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        searchInput.addEventListener('input', (e) => renderGallery(e.target.value));
+        renderGallery();
+    </script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard - Tom Hire Video Library</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+    <div class="nav-container">
+        <a href="index.html" class="logo">Tom Hire <span>Admin</span></a>
+        <ul class="nav-links">
+            <li><a href="index.html">View Site</a></li>
+            <li><a href="#" id="logoutBtn" style="display:none">Logout</a></li>
+        </ul>
+    </div>
+</header>
+
+<main>
+    <section id="loginCard" style="max-width:420px;margin:3rem auto;background:var(--bg-secondary);padding:2rem;border-radius:8px">
+        <h2>Admin Login</h2>
+        <div class="form-group">
+            <label for="adminEmail">Email</label>
+            <input id="adminEmail" type="email" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label for="adminPass">Password</label>
+            <input id="adminPass" type="password" class="form-control" required>
+        </div>
+        <button class="btn" id="loginBtn" style="width:100%">Login</button>
+        <p id="loginError" style="color:var(--danger);margin-top:1rem"></p>
+    </section>
+
+    <section id="dashboardContent" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap">
+            <h1>Video Management</h1>
+            <button class="btn" id="newVideoBtn">+ Add New Video</button>
+        </div>
+
+        <p id="statusMessage" style="margin:1rem 0;color:var(--text-secondary)"></p>
+
+        <div id="videoFormContainer" style="display:none;background:var(--bg-secondary);padding:1.5rem;border-radius:8px;margin:1.5rem 0">
+            <h3 id="formTitle">Add New Video</h3>
+            <form id="videoForm">
+                <input type="hidden" id="videoId">
+
+                <div class="form-group">
+                    <label for="vTitle">Video Title</label>
+                    <input id="vTitle" class="form-control" required maxlength="200">
+                </div>
+
+                <div class="form-group">
+                    <label for="vDesc">Description</label>
+                    <textarea id="vDesc" class="form-control" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="vThumb">Thumbnail Image URL</label>
+                    <input id="vThumb" type="url" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="vUrl">Viddler Embed URL</label>
+                    <input id="vUrl" type="url" class="form-control" required placeholder="https://...">
+                    <small>Paste the Viddler embed URL, not the full iframe code.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="vDate">Publication Date</label>
+                    <input id="vDate" type="date" class="form-control" required>
+                </div>
+
+                <button type="submit" class="btn" id="saveBtn">Save Video</button>
+                <button type="button" class="btn btn-secondary" id="cancelForm">Cancel</button>
+            </form>
+        </div>
+
+        <div style="overflow-x:auto">
+            <table>
+                <thead>
+                    <tr><th>Title</th><th>Publication Date</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="adminTableBody"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <p>&copy; 2026 Tom Hire Video Library. All rights reserved.</p>
+</footer>
+
+<script src="app.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+const loginCard = $("loginCard");
+const dashboard = $("dashboardContent");
+const loginError = $("loginError");
+const statusMessage = $("statusMessage");
+const formContainer = $("videoFormContainer");
+const form = $("videoForm");
+const tbody = $("adminTableBody");
+
+function showDashboard() {
+    loginCard.style.display = "none";
+    dashboard.style.display = "block";
+    $("logoutBtn").style.display = "inline";
+    loadAdminTable();
+}
+
+function showLogin() {
+    loginCard.style.display = "block";
+    dashboard.style.display = "none";
+    $("logoutBtn").style.display = "none";
+}
+
+$("loginBtn").addEventListener("click", async () => {
+    loginError.textContent = "";
+    $("loginBtn").disabled = true;
+
+    try {
+        await loginAdmin($("adminEmail").value.trim(), $("adminPass").value);
+        $("adminPass").value = "";
+        showDashboard();
+    } catch (error) {
+        loginError.textContent = error.message;
+    } finally {
+        $("loginBtn").disabled = false;
+    }
+});
+
+$("adminPass").addEventListener("keydown", e => {
+    if (e.key === "Enter") $("loginBtn").click();
+});
+
+$("logoutBtn").addEventListener("click", async e => {
+    e.preventDefault();
+    await logoutAdmin();
+    showLogin();
+});
+
+async function loadAdminTable() {
+    tbody.replaceChildren();
+    statusMessage.textContent = "Loading videos...";
+
+    try {
+        const videos = await getVideos();
+
+        if (!videos.length) {
+            statusMessage.textContent = "No videos added yet.";
+            return;
+        }
+
+        statusMessage.textContent = "";
+
+        videos.forEach(video => {
+            const tr = document.createElement("tr");
+            const title = document.createElement("td");
+            const date = document.createElement("td");
+            const actions = document.createElement("td");
+
+            title.textContent = video.title || "";
+            date.textContent = video.publish_date || "";
+
+            const edit = document.createElement("button");
+            edit.className = "btn btn-secondary";
+            edit.textContent = "Edit";
+            edit.style.marginRight = "6px";
+            edit.addEventListener("click", () => editVideo(video));
+
+            const del = document.createElement("button");
+            del.className = "btn btn-danger";
+            del.textContent = "Delete";
+            del.addEventListener("click", () => removeVideo(video.id));
+
+            actions.append(edit, del);
+            tr.append(title, date, actions);
+            tbody.appendChild(tr);
+        });
+    } catch (error) {
+        statusMessage.textContent = "Could not load videos: " + error.message;
+    }
+}
+
+$("newVideoBtn").addEventListener("click", () => {
+    form.reset();
+    $("videoId").value = "";
+    $("formTitle").textContent = "Add New Video";
+    $("vDate").value = new Date().toISOString().slice(0, 10);
+    formContainer.style.display = "block";
+});
+
+$("cancelForm").addEventListener("click", () => {
+    formContainer.style.display = "none";
+});
+
+function editVideo(video) {
+    $("videoId").value = video.id;
+    $("vTitle").value = video.title || "";
+    $("vDesc").value = video.description || "";
+    $("vThumb").value = video.thumbnail || "";
+    $("vUrl").value = video.video_url || "";
+    $("vDate").value = video.publish_date || "";
+    $("formTitle").textContent = "Edit Video";
+    formContainer.style.display = "block";
+    window.scrollTo({top: 0, behavior: "smooth"});
+}
+
+form.addEventListener("submit", async e => {
+    e.preventDefault();
+
+    const id = $("videoId").value;
+    const payload = {
+        title: $("vTitle").value.trim(),
+        description: $("vDesc").value.trim(),
+        thumbnail: $("vThumb").value.trim(),
+        video_url: $("vUrl").value.trim(),
+        publish_date: $("vDate").value
+    };
+
+    const save = $("saveBtn");
+    save.disabled = true;
+    save.textContent = "Saving...";
+
+    try {
+        await saveVideo(payload, id || null);
+        formContainer.style.display = "none";
+        form.reset();
+        statusMessage.textContent = "Video saved successfully.";
+        await loadAdminTable();
+    } catch (error) {
+        alert("Could not save video: " + error.message);
+    } finally {
+        save.disabled = false;
+        save.textContent = "Save Video";
+    }
+});
+
+async function removeVideo(id) {
+    if (!confirm("Are you sure you want to delete this video record?")) return;
+
+    try {
+        await deleteVideoRecord(id);
+        statusMessage.textContent = "Video record deleted.";
+        await loadAdminTable();
+    } catch (error) {
+        alert("Could not delete video: " + error.message);
+    }
+}
+
+(async function initAdmin() {
+    if (await isAdminLoggedIn()) {
+        showDashboard();
+    } else {
+        showLogin();
+    }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Video - Tom Hire Video Library</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="nav-container">
+            <a href="index.html" class="logo">Tom Hire <span>Video Library</span></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </header>
+
+    <main>
+        <div class="watch-container" id="watchContainer">
+            <!-- Dynamically populated -->
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Tom Hire Video Library. All rights reserved.</p>
+    </footer>
+
+    <script src="app.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoId = urlParams.get('id');
+        const container = document.getElementById('watchContainer');
+
+        const videos = getVideos();
+        const video = videos.find(v => v.id === videoId);
+
+        if (!video) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 4rem 0;">
+                    <h2>Video not found</h2>
+                    <p style="color: var(--text-secondary); margin: 1rem 0;">The video you are looking for may have been removed or the link is incorrect.</p>
+                    <a href="index.html" class="btn">Return Home</a>
+                </div>
+            `;
+        } else {
+            document.title = `${video.title} - Tom Hire Video Library`;
+            
+            let playerHtml = '';
+            const rawUrl = video.videoUrl ? video.videoUrl.trim() : '';
+
+            // Handle iframe embeds or direct video streams seamlessly
+            if (rawUrl.startsWith('<iframe') || rawUrl.includes('embed')) {
+                playerHtml = rawUrl.startsWith('<iframe') ? rawUrl : `<iframe src="${rawUrl}" allowfullscreen allow="autoplay; fullscreen"></iframe>`;
+            } else {
+                playerHtml = `<video controls autoplay src="${rawUrl}" poster="${video.thumbnail}"></video>`;
+            }
+
+            // Unique public watch URL for this specific video
+            const uniqueWatchUrl = window.location.href;
+
+            container.innerHTML = `
+                <div class="player-wrapper">
+                    ${playerHtml}
+                </div>
+                <div class="watch-details">
+                    <h1>${video.title}</h1>
+                    <div class="watch-actions">
+                        <span style="color: var(--text-secondary);">Published on ${video.pubDate}</span>
+                        <div class="share-group">
+                            <button class="btn btn-secondary" id="whatsappBtn">Share on WhatsApp</button>
+                            <button class="btn" id="shareBtn">Share Unique Link</button>
+                        </div>
+                    </div>
+                    <p style="color: var(--text-secondary); white-space: pre-line; margin-top: 1rem;">${video.description}</p>
+                </div>
+            `;
+
+            // Attach unique share handlers
+            document.getElementById('shareBtn').addEventListener('click', () => {
+                handleShare(video.title, uniqueWatchUrl);
+            });
+
+            document.getElementById('whatsappBtn').addEventListener('click', () => {
+                const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent('Watch "' + video.title + '" on Tom Hire Video Library: ' + uniqueWatchUrl)}`;
+                window.open(whatsappUrl, '_blank');
+            });
+        }
+    </script>
+</body>
+</html>
