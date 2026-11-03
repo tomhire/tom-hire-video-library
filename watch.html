@@ -1,93 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watch Video - Tom Hire Video Library</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Watch Video - Tom Hire Video Library</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .watch-container {
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    .player {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .player iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+    .watch-title { margin-top: 24px; }
+    .watch-description { line-height: 1.7; }
+  </style>
 </head>
 <body>
-    <header>
-        <div class="nav-container">
-            <a href="index.html" class="logo">Tom Hire <span>Video Library</span></a>
-            <ul class="nav-links">
-                <li><a href="index.html">Home</a></li>
-                <li><a href="about.html">About</a></li>
-                <li><a href="contact.html">Contact</a></li>
-            </ul>
-        </div>
-    </header>
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="logo">Tom Hire <span>Video Library</span></a>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="admin.html">Admin Dashboard</a></li>
+      </ul>
+    </div>
+  </header>
 
-    <main>
-        <div class="watch-container" id="watchContainer">
-            <!-- Dynamically populated -->
-        </div>
-    </main>
+  <main class="watch-container">
+    <div id="videoPlayer" class="player">
+      <p style="color:white;padding:20px;">Loading video...</p>
+    </div>
+    <h1 id="videoTitle" class="watch-title">Loading...</h1>
+    <p id="videoDescription" class="watch-description"></p>
+    <p id="videoDate"></p>
+    <p><a href="index.html">← Back to videos</a></p>
+  </main>
 
-    <footer>
-        <p>&copy; 2026 Tom Hire Video Library. All rights reserved.</p>
-    </footer>
+  <script src="app.js"></script>
+  <script>
+    async function loadVideo() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("id");
+      const player = document.getElementById("videoPlayer");
 
-    <script src="app.js"></script>
-    <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const videoId = urlParams.get('id');
-        const container = document.getElementById('watchContainer');
+      if (!id) {
+        player.textContent = "Video ID missing.";
+        return;
+      }
 
-        const videos = getVideos();
-        const video = videos.find(v => v.id === videoId);
+      try {
+        const videos = await getVideos();
+        const video = videos.find(item => String(item.id) === String(id));
 
         if (!video) {
-            container.innerHTML = `
-                <div style="text-align: center; padding: 4rem 0;">
-                    <h2>Video not found</h2>
-                    <p style="color: var(--text-secondary); margin: 1rem 0;">The video you are looking for may have been removed or the link is incorrect.</p>
-                    <a href="index.html" class="btn">Return Home</a>
-                </div>
-            `;
-        } else {
-            document.title = `${video.title} - Tom Hire Video Library`;
-            
-            let playerHtml = '';
-            const rawUrl = video.videoUrl ? video.videoUrl.trim() : '';
-
-            // Handle iframe embeds or direct video streams seamlessly
-            if (rawUrl.startsWith('<iframe') || rawUrl.includes('embed')) {
-                playerHtml = rawUrl.startsWith('<iframe') ? rawUrl : `<iframe src="${rawUrl}" allowfullscreen allow="autoplay; fullscreen"></iframe>`;
-            } else {
-                playerHtml = `<video controls autoplay src="${rawUrl}" poster="${video.thumbnail}"></video>`;
-            }
-
-            // Unique public watch URL for this specific video
-            const uniqueWatchUrl = window.location.href;
-
-            container.innerHTML = `
-                <div class="player-wrapper">
-                    ${playerHtml}
-                </div>
-                <div class="watch-details">
-                    <h1>${video.title}</h1>
-                    <div class="watch-actions">
-                        <span style="color: var(--text-secondary);">Published on ${video.pubDate}</span>
-                        <div class="share-group">
-                            <button class="btn btn-secondary" id="whatsappBtn">Share on WhatsApp</button>
-                            <button class="btn" id="shareBtn">Share Unique Link</button>
-                        </div>
-                    </div>
-                    <p style="color: var(--text-secondary); white-space: pre-line; margin-top: 1rem;">${video.description}</p>
-                </div>
-            `;
-
-            // Attach unique share handlers
-            document.getElementById('shareBtn').addEventListener('click', () => {
-                handleShare(video.title, uniqueWatchUrl);
-            });
-
-            document.getElementById('whatsappBtn').addEventListener('click', () => {
-                const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent('Watch "' + video.title + '" on Tom Hire Video Library: ' + uniqueWatchUrl)}`;
-                window.open(whatsappUrl, '_blank');
-            });
+          player.textContent = "Video not found.";
+          return;
         }
-    </script>
+
+        document.getElementById("videoTitle").textContent = video.title || "";
+        document.getElementById("videoDescription").textContent = video.description || "";
+        document.getElementById("videoDate").textContent = video.publish_date || "";
+
+        const videoUrl = new URL(video.video_url);
+        if (videoUrl.hostname !== "viddler.com" &&
+            !videoUrl.hostname.endsWith(".viddler.com")) {
+          player.textContent = "Invalid video URL.";
+          return;
+        }
+
+        const iframe = document.createElement("iframe");
+        iframe.src = videoUrl.href;
+        iframe.title = video.title || "Video player";
+        iframe.allow = "autoplay; fullscreen; picture-in-picture";
+        iframe.allowFullscreen = true;
+        player.replaceChildren(iframe);
+      } catch (error) {
+        console.error(error);
+        player.textContent = "Could not load video. Please refresh.";
+      }
+    }
+
+    loadVideo();
+  </script>
 </body>
 </html>
